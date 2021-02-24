@@ -3,3 +3,11 @@
 .ipynb_checkpoints/
 .vscode/
 data/
+
+# Files
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
