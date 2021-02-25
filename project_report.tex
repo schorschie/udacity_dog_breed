@@ -1,4 +1,4 @@
-\documentclass[paper=A4, DIV=calc, parskip=half]{scrartcl}
+\documentclass[paper=A4, DIV=10, parskip=half]{scrartcl}
 
 % Udacity Links
 % -------------
@@ -28,6 +28,7 @@
 \RequirePackage{listings}
 \RequirePackage{amsmath}
 \RequirePackage{amsfonts}
+\RequirePackage{float}
 
 % Document Head
 % -------------
@@ -66,7 +67,7 @@ VGG16\footnote{\href{https://pytorch.org/vision/0.8/models.html}{Pytorch Models}
 Networks for Large-Scale Image Recognition}} is adapted to perform the same task
 with an accuracy of $>$60\,\%.
 
-Besides dog breeds, also an existing
+Besides a neural net for dog breed detection, also an existing
 OpenCV\footnote{\href{https://opencv.org/}{Open Computer Vision}} neural net for
 face recognition is adapted. The algorithm provides a bounding box for each face
 it found within a picture.
@@ -90,6 +91,266 @@ looking dog breed.
 
 \subsection*{Problem Statement}
 
+Given that the human face recognition is a takeover OpenCV network, the problem
+solved is the identification of a dog breed with the help of a convolutional
+neural network.
+
+% The problem which needs to be solved is clearly defined. A strategy for solving the
+% problem, including discussion of the expected solution, has been made.
+
+\subsection*{Metrics}
+
+For the evaluation the labelled data is used. For example the accuracy of the face
+detection algorithm can be measured by feeding it with (previously labelled) images of
+humans: 
+
+$$ Score = \frac{\textrm{Humans detected}}{\textrm{Images presented}}$$
+
+A slightly modified algorithm is used to evaluate the dog detecting model. The dog
+detector provides a breed identification on top, so in the first step the upper term can
+be used to judge the accuracy of the dog detection. Additionally the quality of the breed
+identification is measured as follows:
+
+$$ Score = \sum_{breeds}{\frac{\textrm{correct breed identified}}{\textrm{breed provided}}} $$
+
+
+% Metrics used to measure the performance of a model or result are clearly defined.
+% Metrics are justified based on the characteristics of the problem.
+
+\section*{Analysis}
+
+\subsection*{Data Exploration}
+
+The data consists of two different sets, provided by Udacity and are described as follows:
+
+\begin{description}
+  \item[\href{https://s3-us-west-1.amazonaws.com/udacity-aind/dog-project/dogImages.zip}{dog dataset}]
+  The dog data set is already divided into three different datasets (folders)
+  for test, training and validation. Each folder contains sub directories of the specific
+  formating \texttt{DDD.breed\_name}, where \texttt{DDD} represents a 3 digit number,
+  followed by the breed name after a dot. Each subfolder contains a hand full of images of
+  the specific breed.
+  
+  Overall there are 133 different dog breeds, and 835 images provided for validation, 6680
+  images for training and 836 images for testing. The images within the training dataset
+  are unbalanced, the amount of images per breed varies from 26 for the Norwegian Buhund
+  and the Xoloitzcuintli to 77 for the Alaskan Malamute. So some breeds are represented
+  roughly 3 times more often.
+  
+  The dog images contain a singular dog each, mostly of the whole dog, sometimes only of
+  the snout, but they are not equally sized, they vary from 5 kB up to 5 MB. Their aspect
+  ratios cover all ranges between portrait, landscape and quadratic.
+  
+  \item[\href{https://s3-us-west-1.amazonaws.com/udacity-aind/dog-project/lfw.zip}{human dataset}]
+  The human dataset consists of 13233 images of 5749 persons, which are stored in a
+  separate directory named after each  celebrity. The images of the people are already
+  cropped and centred around their face and all of the same size of 250x250, but
+  the backgrounds vary. Sometimes there are additional people in the background.
+\end{description}
+
+% If a dataset is present, features and calculated statistics relevant to the problem have
+% been reported and discussed, along with a sampling of the data. In lieu of a dataset, a
+% thorough description of the input space or input data has been made. Abnormalities or
+% characteristics of the data or input that need to be addressed have been identified.
+
+\subsection*{Exploratory Visualization}
+
+\subsubsection*{Human Dataset}
+
+Here is a random sample of the human images dataset:
+
+\includegraphics[width=\textwidth]{images/human_sample.png}
+
+Its worth noticing, that George Bush appeared two times in this randoms sample
+of 36 images out of 13233, so this is a hint for an unbalanced dataset. A
+further investigation of the dataset confirms the suspicion, the following bar
+plot, figure \ref{human_balance} in the appendix, shows the amount of pictures
+of the top 25.
+
+George Bush, Collin Powell and Tony Blair alone are represented in 910 Images or
+roughly seven percent of the dataset. On the other hand 4069 celebrities of the
+5749 persons are represented by only one image.
+%, see figure \ref{human_tail_sample}:
+
+% \begin{figure}[h]
+%   \centering
+%   \includegraphics[height=6cm]{images/human_tail_sample.png}
+%   \caption{4069 celebrities are represented in the human dataset with only one picture each}
+%   \label{human_tail_sample}
+% \end{figure}
+
+If the problem at hand would be the training of a face recognition algorithm
+this unbalanced dataset would be a problem, but within this project it is only
+used for sample data sets to test the demonstrator app with later.
+
+\subsubsection*{Dog Dataset}
+
+Here is a random sample of the dog images dataset:\\
+\includegraphics[width=\textwidth]{images/dog_sample.png}
+
+At a first glance everything is fine, there are images of dogs, sometimes whole
+dogs and sometimes their snouts only. Therefore a more thorough investigation is
+performed.
+
+The following table shows the amount of breeds (count) for each subset: "train",
+"test" and "valid". The mean value shows how many images are present in average
+in every breed: 50.
+
+\begin{center}
+\includegraphics[width=7cm]{images/dog_deviation.png}
+\end{center}
+
+Also it states, that there are at least 26 images for each
+breed in the training set and 77 at best. A more visual representation about the
+balance of the data set is provided in the appendix within this document in the
+bar plot \ref{dog_train_balance}.
+
+Additionally also the sizes and aspect ratios of the images matter. These were
+investigated by extracting these information out of each file and storing them
+in a Pandas\footnote{\href{pandas.pydata.org/}{Panel Data}} DataFrame for
+further investigation. 
+
+The following figure \ref{dog_image_sizes} shows a logarithmic histogram of the
+file sizes of the dog images. Most images are roundabout 100 kB in size,
+starting at 4 kB but leading up to 10 MB.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=5cm]{images/dog_image_sizes.png}
+  \caption{Histogram of the dog image sizes [kB, logarithmic]}
+  \label{dog_image_sizes}
+\end{figure}
+
+The top 5 image sizes were inspected visually and the biggest image in the
+dataset is some image of two people at a dog show. This image, see figure
+\ref{dog_extreme} is not suitable for training and therefore discarded from the
+dataset.
+
+In the same manner the top and bottom five aspect ratios where investigated. The
+image with the "highest" Aspect ratio is a montage of two Lhasa Apso dogs, which
+is fine to use in the test data set.
+
+\begin{figure}
+  \centering
+  \includegraphics[width=5cm]{images/Alaskan_malamute_00366.jpg}
+  \,
+  \includegraphics[width=6cm]{images/Lhasa_apso_06668.jpg}
+  \caption{The maximum sized image and the maximum aspect ration image of the dog dataset}
+  \label{dog_extreme}
+\end{figure}
+
+% A visualization has been provided that summarizes or extracts a relevant characteristic
+% or feature about the dataset or input data with thorough discussion. Visual cues are
+% clearly defined.
+
+\subsection*{Algorithms and Techniques}
+
+The problem of the dog breed identification will be solved using a convolutional
+neural network. These networks are especially good on solving the tasks of image
+recognition, within a 2-dimensional space. 
+
+Whereas classical neural networks depend on a flat input vector and usually
+fully connect the different layers, in a convolutional network many different
+subsets of images are analysed with the help of a so called kernel. The kernel
+can be thought of as a kind of filter, which extracts the information that
+pixels have in relation to one another, like for example a horizontal line. This
+extracted information than is passed on to another layer and can be abstracted
+even more.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=7cm]{images/different_kernels.png}
+\caption{A scheme of how different kernels detect different features, source:
+\href{https://youtu.be/RnM1D-XI--8?t=181}{Udacity}}
+  \label{different_kernels}
+\end{figure}
+
+Figure \ref{different_kernels} shows an Udacity example of how four different
+kernels detect four different kinds of features in an image:
+\begin{itemize}
+  \item horizontal lines from dark to light
+  \item horizontal lines from light to dark
+  \item vertical lines from dark to light and
+  \item vertical lines from light to dark.
+\end{itemize}
+
+The whole training of a CNN is the optimization of the weights in the
+different kernels of the neural net. So the CNN learns to extract different
+features of images within the training task.
+
+% Algorithms and techniques used in the project are thoroughly discussed and properly
+% justified based on the characteristics of the problem.
+
+\subsection*{Benchmark}
+
+As a benchmark I will use a naive predictor. The dataset is slightly unbalanced so
+assuming that there are 133 different dog breeds, some of the occurring up to three times
+more than others, the naive approach should guess the correct breed $(b)$ with
+$p_{b}=\frac{k_{b}}{3\cdot133}\,,\:k_{b}=\left[1\ldots3\right]$, or less than 1\%. The
+implemented model shall get at least 10\%.
+
+% Student clearly defines a benchmark result or threshold for comparing performances of
+% solutions obtained.
+
+\section*{Methodology}
+
+\subsection*{Data Preprocessing}
+
+The images are preprocessed and augmented in three different kinds, for the
+testing, the training and the validation data set.
+
+\begin{lstlisting}[caption=Image Transformation, label=image_transformation]
+# documentation values:
+# https://pytorch.org/docs/stable/torchvision/transforms.html
+normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],  
+                                 std=[0.229, 0.224, 0.225])   
+
+training_transform = transforms.Compose([transforms.RandomResizedCrop(256),
+                                     transforms.RandomHorizontalFlip(),
+                                     transforms.ToTensor(),
+                                     normalize])
+
+validation_transform = transforms.Compose([transforms.Resize(300),
+                                     transforms.CenterCrop(256),
+                                     transforms.ToTensor(),
+                                     normalize])
+
+test_transform = transforms.Compose([transforms.Resize(size=(256,256)),
+                                     transforms.ToTensor(),
+                                     normalize])
+\end{lstlisting}
+
+Listing \ref{image_transformation} shows all image preprocessing steps performed
+for the training of the CNN. All in common for the testing, validation and
+training data set is a normalization and a transformation into a
+\lstinline{torch.transforms.ToTensor()} data type.
+
+The normalization takes place with documented values and changes the
+representation of the integer RGB values $\underline{n} \in \mathbb{N}^3, [0
+\ldots 255]$ to normalized float values $\underline{q} \in \mathbb{Q}^3, \left[0.0
+\ldots 1.0\right]$. Two dimensions for the image, the third for the colour.
+
+The test dataset gets an additional resize to a quadratic shape $256^2$. If the
+image was portrait or landscape before it now is squeezed, but that doesn't
+matter for the recognition task. I chose 256, because it is a power of 2.
+
+The validation dataset undergoes a different transformation. It is first resized
+and then cropped to the center, because the validation images all contain the
+dog in the center of the image.
+
+The training dataset a different kind of resize, the
+\lstinline{RandomResizedCrop}. This causes the image to be cropped at a random
+position of the in put image. Therefore the training data may or may not
+contain an whole dog or just a part of a dog. This leads to a harder training
+with better results and prevents over fitting. For the same reason the training
+dataset also is preprocessed with a random horizontal flip.
+
+% All preprocessing steps have been clearly documented. Abnormalities or characteristics
+% of the data or input that needed to be addressed have been corrected. If no data
+% preprocessing is necessary, it has been clearly justified.
+
+\subsection*{Implementation}
+
 \subsubsection*{Transfer Learning with a pre trained Network}
 
 The adaption of the pre trained VGG16 neural network is thoroughly described in
@@ -101,7 +362,7 @@ data base with 14 million images and can extract 1000 classes within the
 image-net database. These 1000 labels are defined by the last fully connected
 layer of the CNN, see figure \ref{vgg16arch}.
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
   \includegraphics[width=10cm]{images/vgg_16_architecture.png}
   \caption{VGG-16 Architecture, Source: Udacity}
@@ -214,10 +475,10 @@ class Net(nn.Module):
     super(Net, self).__init__()
     # convolutional layer (sees 256x256x3 image tensor)
     self.conv1 = nn.Conv2d(3, 16, 3, padding=1)
-    
+
     # convolutional layer (sees 128x128x3 tensor)
     self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
-    
+
     # convolutional layer (sees 64x64x3 tensor)
     self.conv3 = nn.Conv2d(32, 64, 3, padding=1)
 ...
@@ -225,109 +486,22 @@ class Net(nn.Module):
 
 It is worthwhile to notice that the custom CNN has 64 features, but can identify
 133 dog breeds. That is, because each possible combination of theses features
-is a different point in $\mathbb{Q}^{64\times64}$. 
-
-% The problem which needs to be solved is clearly defined. A strategy for solving the
-% problem, including discussion of the expected solution, has been made.
-
-\subsection*{Metrics}
-
-For the evaluation the labelled data is used. For example the accuracy of the face
-detection algorithm can be measured by feeding it with (previously labelled) images of
-humans: 
-
-$$ Score = \frac{\textrm{Humans detected}}{\textrm{Images presented}}$$
-
-A slightly modified algorithm is used to evaluate the dog detecting model. The dog
-detector provides a breed identification on top, so in the first step the upper term can
-be used to judge the accuracy of the dog detection. Additionally the quality of the breed
-identification is measured as follows:
-
-$$ Score = \sum_{breeds}{\frac{\textrm{correct breed identified}}{\textrm{breed provided}}} $$
-
-
-% Metrics used to measure the performance of a model or result are clearly defined.
-% Metrics are justified based on the characteristics of the problem.
-
-\section*{Analysis}
-
-\subsection*{Data Exploration}
-
-The data consists of two different sets, provided by Udacity and are described as follows:
-
-\begin{description}
-  \item[\href{https://s3-us-west-1.amazonaws.com/udacity-aind/dog-project/dogImages.zip}{dog dataset}]
-  The dog data set is already divided into three different datasets (folders)
-  for test, training and validation. Each folder contains sub directories of the specific
-  formating \texttt{DDD.breed\_name}, where \texttt{DDD} represents a 3 digit number,
-  followed by the breed name after a dot. Each subfolder contains a hand full of images of
-  the specific breed.
-  
-  Overall there are 133 different dog breeds, and 835 images provided for validation, 6680
-  images for training and 836 images for testing. The images within the training dataset
-  are unbalanced, the amount of images per breed varies from 26 for the Norwegian Buhund
-  and the Xoloitzcuintli to 77 for the Alaskan Malamute. So some breeds are represented
-  roughly 3 times more often.
-  
-  The dog images contain a singular dog each, mostly of the whole dog, sometimes only of
-  the snout, but they are not equally sized, they vary from 5 kB up to 5 MB. Their aspect
-  ratios cover all ranges between portrait, landscape and quadratic.
-  
-  \item[\href{https://s3-us-west-1.amazonaws.com/udacity-aind/dog-project/lfw.zip}{human dataset}]
-  The human dataset consists of 13233 images of 5749 persons, which are stored in a
-  separate directory named after each  celebrity. The images of the people are already
-  cropped and centred around their face and all of the same size of 250x250, but
-  the backgrounds vary. Sometimes there are additional people in the background.
-\end{description}
-
-% If a dataset is present, features and calculated statistics relevant to the problem have
-% been reported and discussed, along with a sampling of the data. In lieu of a dataset, a
-% thorough description of the input space or input data has been made. Abnormalities or
-% characteristics of the data or input that need to be addressed have been identified.
-
-\subsection*{Exploratory Visualization}
-
-\subsubsection*{Human Dataset}
-
-The human dataset 
-
-
-\subsubsection*{Dog Dataset}
-% A visualization has been provided that summarizes or extracts a relevant characteristic
-% or feature about the dataset or input data with thorough discussion. Visual cues are
-% clearly defined.
-
-\subsection*{Algorithms and Techniques}
-
-% Algorithms and techniques used in the project are thoroughly discussed and properly
-% justified based on the characteristics of the problem.
-
-\subsection*{Benchmark}
-
-As a benchmark I will use a naive predictor. The dataset is slightly unbalanced so
-assuming that there are 133 different dog breeds, some of the occurring up to three times
-more than others, the naive approach should guess the correct breed $(b)$ with
-$p_{b}=\frac{k_{b}}{3\cdot133}\,,\:k_{b}=\left[1\ldots3\right]$, or less than 1\%. The
-implemented model shall get at least 10\%.
-
-% Student clearly defines a benchmark result or threshold for comparing performances of
-% solutions obtained.
-
-\section*{Methodology}
-
-\subsection*{Data Preprocessing}
-
-% All preprocessing steps have been clearly documented. Abnormalities or characteristics
-% of the data or input that needed to be addressed have been corrected. If no data
-% preprocessing is necessary, it has been clearly justified.
-
-\subsection*{Implementation}
+is a different point in $\mathbb{Q}^{64\times64}$.
 
 % The process for which metrics, algorithms, and techniques were implemented with the
 % given datasets or input data has been thoroughly documented. Complications that occurred
 % during the coding process are discussed.
 
 \subsection*{Refinement}
+
+\begin{itemize}
+\item The dog images dataset could be refined using the human face detection algorithm
+to clean it from unwanted people in the dataset.
+\item Different augmentations, for example rotation of the images would lead to
+a better trained model, but also higher CPU/GPU usage.
+\item A weight initialization of the CNN would speed up the training effect and
+increase the prediction accuracy.
+\end{itemize}
 
 % The process of improving upon the algorithms and techniques used is clearly documented.
 % Both the initial and final solutions are reported, along with intermediate solutions, if
@@ -337,13 +511,41 @@ implemented model shall get at least 10\%.
 
 \subsection*{Model Evaluation and Validation}
 
+\begin{itemize}
+  \item The CNN implemented from Scratch provided a test accuracy of : 10\,\%
+  (88/836)
+  \item The Transfer Learning VGG16 model provides a test accuracy of 84\,\% (705/836)
+\end{itemize}
+
 % The final model’s qualities—such as parameters—are evaluated in detail. Some type of
 % analysis is used to validate the robustness of the model’s solution.
 
 \subsection*{Justification}
 
+The Both models performed way better than I expected, I am a little proud that I
+was able to learn to create and adapt these models.
+
+
 % The final results are compared to the benchmark result or threshold with some type of
 % statistical analysis. Justification is made as to whether the final model and solution
 % is significant enough to have adequately solved the problem.
+
+\newpage
+\section*{Appendix}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[height=11cm]{images/human_balance.png}
+  \caption{Top 25 celebrities represented in the human dataset}
+  \label{human_balance}
+\end{figure}
+
+\begin{figure}
+  \centering
+  \includegraphics[height=0.95\textheight]{images/dog_train_balance.png}
+  \caption{Balance of the Dog Breeds within the dog data set}
+  \label{dog_train_balance}
+\end{figure}
+
 
 \end{document}
