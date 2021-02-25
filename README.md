@@ -8,6 +8,8 @@ classification](https://github.com/udacity/deep-learning-v2-pytorch/tree/master/
 
 ## Installation
 
+### Source Code
+
 You need a python 3.X installation and preferably a environment management like [conda](anaconda.org).
 
 Download or clone this git repository and install the python dependencies using the following command:
@@ -19,6 +21,19 @@ conda env create -f requirements.yml
 # Remove uda_dog environment:
 conda remove --name uda_dog --all
 ```
+
+### Data
+
+To run the dog app you need to download the following images of dogs and humans:
+
+* Download the [dog
+  dataset](https://s3-us-west-1.amazonaws.com/udacity-aind/dog-project/dogImages.zip).
+  Unzip the folder and place it in this project's home directory, at the
+  location `/data/dog_images`.
+
+* Download the [human
+  dataset](https://s3-us-west-1.amazonaws.com/udacity-aind/dog-project/lfw.zip).
+  Unzip the folder and place it in the home directory, at location `/data/lfw`.
 
 ## Documentation
 
