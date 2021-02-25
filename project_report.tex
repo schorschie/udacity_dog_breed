@@ -75,7 +75,7 @@ it found within a picture.
 Both algorithms, the OpenCV face recognition and the VGG16 dog breed detection
 are combined into an demo app, that can take an arbitrary picture and return a
 statement of a most likely dog breed. If a picture of a human is provided, the
-app should identify the human, but still provide a statement of a most similar
+app should identify a human, but still provide a statement of a most similar
 looking dog breed.
 
 % Student provides a high-level overview of the project in layman’s terms. Background
@@ -91,9 +91,9 @@ looking dog breed.
 
 \subsection*{Problem Statement}
 
-Given that the human face recognition is a takeover OpenCV network, the problem
-solved is the identification of a dog breed with the help of a convolutional
-neural network.
+The problem solved is the identification of a dog breed with the help of a convolutional
+neural network. An existing OpenCV network for frontal face detection is adapted
+to detect humans in an image.
 
 % The problem which needs to be solved is clearly defined. A strategy for solving the
 % problem, including discussion of the expected solution, has been made.
@@ -163,13 +163,22 @@ Here is a random sample of the human images dataset:
 
 Its worth noticing, that George Bush appeared two times in this randoms sample
 of 36 images out of 13233, so this is a hint for an unbalanced dataset. A
-further investigation of the dataset confirms the suspicion, the following bar
-plot, figure \ref{human_balance} in the appendix, shows the amount of pictures
-of the top 25.
+further investigation of the dataset confirms the suspicion. Figure
+\ref{human_balance}, shows the amount of pictures for the the
+top 25 celebrities. They accumulate nearly half of the dataset, leading with
+George Bush, Collin Powell and Tony Blair which alone are represented in 910
+Images or roughly seven percent.
 
-George Bush, Collin Powell and Tony Blair alone are represented in 910 Images or
-roughly seven percent of the dataset. On the other hand 4069 celebrities of the
-5749 persons are represented by only one image.
+On the other hand 4069 celebrities of the 5749 persons are represented by only
+one image.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[height=11cm]{images/human_balance.png}
+  \caption{Top 25 celebrities represented in the human dataset}
+  \label{human_balance}
+\end{figure}
+
 %, see figure \ref{human_tail_sample}:
 
 % \begin{figure}[h]
@@ -192,13 +201,17 @@ At a first glance everything is fine, there are images of dogs, sometimes whole
 dogs and sometimes their snouts only. Therefore a more thorough investigation is
 performed.
 
-The following table shows the amount of breeds (count) for each subset: "train",
-"test" and "valid". The mean value shows how many images are present in average
-in every breed: 50.
+The following table \ref{table_dogs} shows the amount of breeds (count) for each
+subset: "train", "test" and "valid".
 
-\begin{center}
-\includegraphics[width=7cm]{images/dog_deviation.png}
-\end{center}
+The mean value shows how many images are present in average in every breed: 50.
+
+\begin{table}
+  \centering
+  \caption{Distribution of dog images within the classes (breeds)}
+  \includegraphics[width=7cm]{images/dog_deviation.png}
+  \label{table_dogs}
+\end{table}
 
 Also it states, that there are at least 26 images for each
 breed in the training set and 77 at best. A more visual representation about the
@@ -227,7 +240,7 @@ dataset is some image of two people at a dog show. This image, see figure
 dataset.
 
 In the same manner the top and bottom five aspect ratios where investigated. The
-image with the "highest" Aspect ratio is a montage of two Lhasa Apso dogs, which
+image with the "highest" aspect ratio is a montage of two Lhasa Apso dogs, which
 is fine to use in the test data set.
 
 \begin{figure}
@@ -235,7 +248,7 @@ is fine to use in the test data set.
   \includegraphics[width=5cm]{images/Alaskan_malamute_00366.jpg}
   \,
   \includegraphics[width=6cm]{images/Lhasa_apso_06668.jpg}
-  \caption{The maximum sized image and the maximum aspect ration image of the dog dataset}
+  \caption{The maximum sized image [7MB] and the maximum aspect ration image of the dog dataset}
   \label{dog_extreme}
 \end{figure}
 
@@ -259,7 +272,7 @@ even more.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=7cm]{images/different_kernels.png}
+  \includegraphics[width=8cm]{images/different_kernels.png}
 \caption{A scheme of how different kernels detect different features, source:
 \href{https://youtu.be/RnM1D-XI--8?t=181}{Udacity}}
   \label{different_kernels}
@@ -338,11 +351,11 @@ The validation dataset undergoes a different transformation. It is first resized
 and then cropped to the center, because the validation images all contain the
 dog in the center of the image.
 
-The training dataset a different kind of resize, the
+The training dataset receives yet another type of resize, the
 \lstinline{RandomResizedCrop}. This causes the image to be cropped at a random
-position of the in put image. Therefore the training data may or may not
-contain an whole dog or just a part of a dog. This leads to a harder training
-with better results and prevents over fitting. For the same reason the training
+position of the in put image. Therefore the training data may or may not contain
+an whole dog or just a part of a dog. This leads to a harder training with
+better results and prevents over fitting. For the same reason the training
 dataset also is preprocessed with a random horizontal flip.
 
 % All preprocessing steps have been clearly documented. Abnormalities or characteristics
@@ -356,11 +369,13 @@ dataset also is preprocessed with a random horizontal flip.
 The adaption of the pre trained VGG16 neural network is thoroughly described in
 the Udacity Lesson "Transfer Learning" within the extra curricular
 material\footnote{\href{https://classroom.udacity.com/nanodegrees/nd009-ent/parts/a73e944a-fdd9-4469-9c67-a618aab59b18/modules/7862c5aa-2097-4dfa-9776-cbfe245d7b83/lessons/a559990d-e214-4c5d-a424-437f6299383e/concepts/bd6c99ac-2c4f-4a80-9ae4-adb4403666c2}{Transfer
-Learning Lesson}} for the "Machine Learning Engineer Nano Degree". Essentially
-the VGG16 network was trained on the \href{http://www.image-net.org/}{image-net}
-data base with 14 million images and can extract 1000 classes within the
-image-net database. These 1000 labels are defined by the last fully connected
-layer of the CNN, see figure \ref{vgg16arch}.
+Learning Lesson}} for the "Machine Learning Engineer Nano Degree".
+
+Essentially the VGG16 network was trained on the
+\href{http://www.image-net.org/}{image-net} data base with 14 million images and
+can extract 1000 classes within the image-net database. These 1000 labels are
+defined by the last fully connected layer of the CNN, see figure
+\ref{vgg16arch}.
 
 \begin{figure}[H]
   \centering
@@ -371,8 +386,8 @@ layer of the CNN, see figure \ref{vgg16arch}.
 
 The benefit of such a highly trained network is, that all the image recognition
 filters, which are there to recognise a vast amount of different geometrical
-artifacts like: horizontal lines, vertical lines, circles etc. are already
-there. Moreover the subsequent pooling and convolutional layers are also trained
+artifacts like: horizontal lines, vertical lines, circles etc. are already in
+place. Moreover the subsequent pooling and convolutional layers are also trained
 to identify more complex shapes like: wheels, aeroplanes, or fur.
 
 Therefore the neural net can be adapted and retrained, by only changing the last
@@ -394,7 +409,7 @@ Sequential(
 
 There are three fully connected linear layers, the last one providing 1000 nodes
 for 1000 image classes. The dog breed data set contains 133 breeds, so the
-following three lines of code reconfigure the model \ref{reconf}.
+following three lines of code reconfigure the model, see listing \ref{reconf}.
 
 \begin{lstlisting}[caption=Adapting VGG16 Classifier, label=reconf]
   # Freeze training for all "features" layers
@@ -406,9 +421,9 @@ following three lines of code reconfigure the model \ref{reconf}.
 
 The fist two lines of code tell the model to not adapt (require gradients)
 within the training process. With that option the already existing and capable
-neural net will be preserved during training. The last line changes tha last
+neural net will be preserved during training. The last line changes the last
 fully connected layer to provide 133 exit nodes. These are trainable and will be
-adapted within the training process. 
+adapted (optimized) during the training process.
 
 After that the model is provided with a loss function
 (\lstinline{torch.nn.CrossEntropyLoss}) and a optimization function
@@ -418,12 +433,11 @@ After that the model is provided with a loss function
 
 There are some additional questions which have to be solved when creating a CNN
 from scratch, beginning with the required image size. The image size for the VGG
-is 224x224 by definition so this question did not come up.
+is 224x224 by definition so this question did not come up there.
 
-I chose a image size of 256x256. Since it is a little bit larger than the VGG I
-will not loose to much detail. By setting the size to a power of 2 $(2^8)$ I
-would not have had troubles with halfing the image sizes during the pooling
-layers.
+I chose a image size of $256\times256$. Since it is a little bit larger than the
+VGG no detail is lost. By setting the size to a power of 2 $(2^8)$ it remains
+possible to half the image sizes during the pooling layers.
 
 Second question to solve is how many convolutional and pooling layers shall the
 custom neural net have? The next listing \ref{orig_features} shows the first six
@@ -458,11 +472,12 @@ features 64.
 \item another max pooling layer, halfing the image size to 56.
 \end{enumerate}
 
-it can bee seen, that the amount of features roughly doubles after each pooling
-and the kernel size is 3 for all convolutional layers. I decided to adapt that
-approach and started with only one convolutional layer with 16 features.This was
-already able to identify 3\,\% of the dog images correctly, which is more it
-could have achieved by randomly guessing. 
+It can bee seen, that the amount of features roughly doubles after each pooling
+and the kernel size is 3 for all convolutional layers.
+
+I decided to adapt that approach and started with only one convolutional layer
+with 16 features.This was already able to identify 3\,\% of the dog images
+correctly, which is more it could have achieved by randomly guessing. 
 
 Afterwards the amount of features was doubled with each convolutionl layer and
 after each layer the dimensions where reduced by a factor of 2. The neural net
@@ -530,17 +545,8 @@ was able to learn to create and adapt these models.
 % statistical analysis. Justification is made as to whether the final model and solution
 % is significant enough to have adequately solved the problem.
 
-\newpage
 \section*{Appendix}
-
 \begin{figure}[H]
-  \centering
-  \includegraphics[height=11cm]{images/human_balance.png}
-  \caption{Top 25 celebrities represented in the human dataset}
-  \label{human_balance}
-\end{figure}
-
-\begin{figure}
   \centering
   \includegraphics[height=0.95\textheight]{images/dog_train_balance.png}
   \caption{Balance of the Dog Breeds within the dog data set}
